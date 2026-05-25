@@ -11,7 +11,6 @@ import (
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/include"
-	singLog "github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common/auth"
 	singJSON "github.com/sagernet/sing/common/json"
@@ -228,7 +227,7 @@ func (s *SingBox) Reload(nodeConfig *model.NodeSpec, users []model.UserSpec, tls
 		nlog.Core().Debug("sing-box routing reloaded")
 	}
 
-	nopFactory := singLog.NewNOPFactory()
+	logFactory := s.box.LogFactory()
 
 	// Configuration hash check for inbound reconstruction
 	tlsChanged := !bytes.Equal(s.tls.CertPEM, tls.CertPEM) || !bytes.Equal(s.tls.KeyPEM, tls.KeyPEM)
@@ -295,7 +294,7 @@ func (s *SingBox) Reload(nodeConfig *model.NodeSpec, users []model.UserSpec, tls
 		// new socket before the old one is closed, causing "address already in use".
 		// The brief listen gap (< 1 ms) is far less disruptive than a full restart.
 		_ = im.Remove(tag) // ignore error when tag doesn't exist yet
-		logger := nopFactory.NewLogger(fmt.Sprintf("inbound/%s[%s]", inb.Type, tag))
+		logger := logFactory.NewLogger(fmt.Sprintf("inbound/%s[%s]", inb.Type, tag))
 		if err := im.Create(s.ctx, router, logger, tag, inb.Type, inb.Options); err != nil {
 			return fmt.Errorf("recreate inbound %s: %w", tag, err)
 		}
@@ -543,7 +542,7 @@ func (s *SingBox) reloadInboundsLocked(users []model.UserSpec) error {
 		return fmt.Errorf("router not available")
 	}
 
-	nopFactory := singLog.NewNOPFactory()
+	logFactory := s.box.LogFactory()
 
 	for _, inb := range opts.Inbounds {
 		tag := inb.Tag
@@ -599,7 +598,7 @@ func (s *SingBox) reloadInboundsLocked(users []model.UserSpec) error {
 		}
 
 		_ = im.Remove(tag)
-		logger := nopFactory.NewLogger(fmt.Sprintf("inbound/%s[%s]", inb.Type, tag))
+		logger := logFactory.NewLogger(fmt.Sprintf("inbound/%s[%s]", inb.Type, tag))
 		if err := im.Create(s.ctx, router, logger, tag, inb.Type, inb.Options); err != nil {
 			return fmt.Errorf("recreate inbound %s: %w", tag, err)
 		}
